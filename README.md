@@ -23,7 +23,7 @@ Whether you're a researcher, engineer, or data scientist working in performance 
 You can install this library directly from GitHub using:
 
 ```bash
-pip install git+https://github.com/RakeshHG/workload_vae.git
+pip install git+https://github.com/RakeshHG/vae_workload.git
 ```
 
 ---
@@ -44,44 +44,44 @@ pip install git+https://github.com/RakeshHG/workload_vae.git
 ## 🧪 Example Usage
 
 ```python
-from workload_vae import (
-    load_data, preprocess_data, split_data,
-    perform_eda, build_vae_model,
-    train_vae, validate_vae,
-    generate_samples, postprocess_generated_data,
-    compare_distributions
-)
+import pandas as pd
+from workloadgen.data import load_and_clean_data
+from workloadgen.preprocess import log_transform, scale_data
+from workloadgen.model import VAE, train_vae, save_model, load_model
+from workloadgen.generate import generate_samples, inverse_transform
+from workloadgen.evaluate import compare_distributions
 
-# Step 1: Load & preprocess
-df = load_data("workload.csv")
-df_clean, tensor_data, scaler = preprocess_data(df, log_transform_cols=["Run Time", "Requested Time"])
+# Load and clean data
+df = load_and_clean_data('SDSC_BLUE.csv')
+df_log = log_transform(df, ['Submit Time', 'Wait Time', 'Run Time', 'Requested Time'])
 
-# Step 2: EDA
-perform_eda(df_clean, log_transformed_cols=["Run Time", "Requested Time"])
+# Scale data
+scaled_tensor, scaler = scale_data(df_log)
 
-# Step 3: Train/val split
-train_loader, val_loader = split_data(tensor_data)
+# Train VAE
+input_dim = scaled_tensor.shape[1]
+model = VAE(input_dim=input_dim, latent_dim=20)
+train_loader = torch.utils.data.DataLoader(scaled_tensor, batch_size=128, shuffle=True)
+train_vae(model, train_loader, num_epochs=50)
 
-# Step 4: Build model
-model = build_vae_model(input_dim=tensor_data.shape[1], latent_dim=16)
+# Save model
+save_model(model, 'vae_model.pth')
 
-# Step 5: Training loop (simplified)
-import torch.optim as optim
-optimizer = optim.Adam(model.parameters(), lr=1e-3)
-device = "cuda" if torch.cuda.is_available() else "cpu"
-model.to(device)
+# Load model
+model = load_model('vae_model.pth', input_dim, latent_dim=20)
 
-for epoch in range(20):
-    train_loss = train_vae(model, train_loader, optimizer, device, epoch, beta=1.0)
-    val_loss = validate_vae(model, val_loader, device)
-    print(f"Epoch {epoch}: Train Loss = {train_loss:.2f}, Val Loss = {val_loss:.2f}")
+# Generate synthetic samples
+z = torch.randn(1000, 20)
+generated = generate_samples(model, z)
+generated_df = inverse_transform(generated, scaler, df_log.columns)
 
-# Step 6: Generate new samples
-synthetic_data = generate_samples(model, num_samples=1000, latent_dim=16, device=device)
-df_synth = postprocess_generated_data(synthetic_data, scaler, columns=df.columns)
+# Save synthetic data
+generated_df.to_csv('synthetic_workload.csv', index=False)
 
-# Step 7: Compare distributions
-compare_distributions(df_clean, df_synth)
+# Compare distributions
+original_df = pd.read_csv('SDSC_BLUE.csv')
+compare_distributions(original_df, generated_df)
+
 ```
 
 ---
@@ -89,20 +89,33 @@ compare_distributions(df_clean, df_synth)
 ## 🗂 Project Structure
 
 ```
-workload_vae/
-├── workload_vae/
-│   ├── __init__.py
-│   ├── utils.py                # Dependency checks
-│   ├── data.py                 # Load, clean, scale
-│   ├── eda.py                  # Plot histograms, heatmaps
-│   ├── model.py                # VAE model architecture
-│   ├── training.py             # Training loop, validation, plots
-│   ├── generate.py             # Sampling, inverse scaling
-│   ├── compare.py              # KDE comparisons
-├── setup.py
-├── requirements.txt
-├── README.md
-└── LICENSE
+workloadgen/
+│
+├── workloadgen/                  # Python package
+│   ├── __init__.py              # Make it a package
+│   ├── data_preprocessing.py    # Data cleaning, scaling, etc.
+│   ├── vae_model.py             # VAE model definition
+│   ├── train.py                 # Training loop and validation
+│   ├── generate.py              # Sample generation and postprocessing
+│   ├── evaluate.py              # Data comparison and plotting
+│
+├── scripts/
+│   ├── train_and_generate.py    # CLI entry-point to train and generate
+│
+├── tests/                       # Unit tests
+│   ├── test_data_preprocessing.py
+│   ├── test_generate.py
+│
+├── examples/                    # Jupyter or Python scripts using the library
+│   └── example_usage.ipynb
+│
+├── README.md                    # Project overview
+├── LICENSE                      # Choose a license (e.g., MIT)
+├── setup.py                     # For setuptools-based installation
+├── pyproject.toml               # Modern build system config
+├── requirements.txt             # List dependencies
+├── .gitignore                   # Ignore virtual envs, model files, etc.
+
 ```
 
 ---
@@ -113,8 +126,8 @@ To contribute:
 
 ```bash
 # Clone and install in editable mode
-git clone https://github.com/RakeshHG/workload_vae.git
-cd workload_vae
+git clone https://github.com/RakeshHG/vae_workload.git
+cd vae_workload
 pip install -e .
 ```
 
