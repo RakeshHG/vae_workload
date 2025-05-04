@@ -1,0 +1,8 @@
+__pycache__/
+dist/
+build/
+*.egg-info/
+*.pth
+*.pyc
+workload_vae.pth
+generated_workload.csv
