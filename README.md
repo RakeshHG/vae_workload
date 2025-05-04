@@ -44,43 +44,7 @@ pip install git+https://github.com/RakeshHG/vae_workload.git
 ## 🧪 Example Usage
 
 ```python
-import pandas as pd
-from workloadgen.data import load_and_clean_data
-from workloadgen.preprocess import log_transform, scale_data
-from workloadgen.model import VAE, train_vae, save_model, load_model
-from workloadgen.generate import generate_samples, inverse_transform
-from workloadgen.evaluate import compare_distributions
-
-# Load and clean data
-df = load_and_clean_data('SDSC_BLUE.csv')
-df_log = log_transform(df, ['Submit Time', 'Wait Time', 'Run Time', 'Requested Time'])
-
-# Scale data
-scaled_tensor, scaler = scale_data(df_log)
-
-# Train VAE
-input_dim = scaled_tensor.shape[1]
-model = VAE(input_dim=input_dim, latent_dim=20)
-train_loader = torch.utils.data.DataLoader(scaled_tensor, batch_size=128, shuffle=True)
-train_vae(model, train_loader, num_epochs=50)
-
-# Save model
-save_model(model, 'vae_model.pth')
-
-# Load model
-model = load_model('vae_model.pth', input_dim, latent_dim=20)
-
-# Generate synthetic samples
-z = torch.randn(1000, 20)
-generated = generate_samples(model, z)
-generated_df = inverse_transform(generated, scaler, df_log.columns)
-
-# Save synthetic data
-generated_df.to_csv('synthetic_workload.csv', index=False)
-
-# Compare distributions
-original_df = pd.read_csv('SDSC_BLUE.csv')
-compare_distributions(original_df, generated_df)
+#Coming soon
 
 ```
 
